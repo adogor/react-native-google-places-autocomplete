@@ -90,7 +90,20 @@ export default class GooglePlacesAutocomplete extends Component {
     text: this.props.getDefaultValue(),
     dataSource: this.buildRowsFromResults([]),
     listViewDisplayed: this.props.listViewDisplayed === 'auto' ? false : this.props.listViewDisplayed,
+    requestCount: 0,
   })
+
+  requestCount: 0,
+
+  increaseRequestCount() {
+    this.requestCount++;
+    this.setState({ requestCount: this.requestCount });
+  },
+
+  decreaseRequestCount() {
+    this.requestCount--;
+    this.setState({ requestCount: this.requestCount });
+  },
 
   setAddressText = address => this.setState({ text: address })
 
@@ -153,6 +166,7 @@ export default class GooglePlacesAutocomplete extends Component {
   _abortRequests = () => {
     this._requests.map(i => i.abort());
     this._requests = [];
+    this.requestCount = 0;
   }
 
   /**
@@ -453,6 +467,8 @@ export default class GooglePlacesAutocomplete extends Component {
       this._requests.push(request);
       request.timeout = this.props.timeout;
       request.ontimeout = this.props.onTimeout;
+      request.addEventListener("load", () => this.decreaseRequestCount());
+      request.addEventListener("error", () => this.decreaseRequestCount());
       request.onreadystatechange = () => {
         if (request.readyState !== 4) {
           return;
@@ -481,6 +497,7 @@ export default class GooglePlacesAutocomplete extends Component {
       }
 
       request.send();
+      this.increaseRequestCount();
     } else {
       this._results = [];
       this.setState({
@@ -634,7 +651,7 @@ export default class GooglePlacesAutocomplete extends Component {
 
   _renderLeftButton = () => {
     if (this.props.renderLeftButton) {
-      return this.props.renderLeftButton()
+      return this.props.renderLeftButton(this.state.requestCount)
     }
   }
 
